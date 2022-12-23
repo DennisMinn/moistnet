@@ -2,6 +2,9 @@ import argparse
 import pandas as pd
 from tqdm import tqdm
 from pytube import Channel
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
+from youtube_transcript_api.formatters import JSONFormatter
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -19,16 +22,7 @@ def download_video(video):
         filename=f"audio_{video_id}.mp4"
     )
 
-    if video.captions.get("en"):
-        captions = video.captions["en"]
-    elif video.captions.get("a.en"):
-        captions = video.captions["a.en"]
-    else:
-        captions = None
-
-    if captions is not None:
-        with open(f"data/caption/captions_{video_id}.xml", "w") as f:
-            f.write(captions.xml_captions)
+    transcript = download_transcript(video_id)
 
     stats = {
         "id": video_id,
@@ -37,12 +31,23 @@ def download_video(video):
         "res": "480p",
         "abr": "48kbps",
         "title": video.title,
+        "transcript": transcript,
         "length": video.length,
         "views": video.views,
-        "captions": captions is not None
     }
 
     return stats
+
+
+def download_transcript(video_id):
+    transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+    transcript_text = TextFormatter().format_transcript(transcript)
+    transcript_json = JSONFormatter().format_transcript(transcript)
+
+    with open(f"data/caption/captions_{video_id}.json", "w", encoding="utf-8") as outfile:
+        outfile.write(transcript_json)
+
+    return transcript_text
 
 
 if __name__ == "__main__":
