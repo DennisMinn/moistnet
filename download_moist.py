@@ -8,24 +8,29 @@ from youtube_transcript_api.formatters import TextFormatter, JSONFormatter
 from concurrent.futures import ThreadPoolExecutor
 
 
-def download_video(video, visual, audio, transcript):
+def download_video(video, visual_flag, audio_flag, transcript_flag):
     video_id = video.video_id
     streams = video.streams
 
-    if visual:
+    if visual_flag:
         streams.get_by_itag("244").download(
             output_path="data/video",
             filename=f"video_{video_id}.mp4"
         )
 
-    if audio:
+    if audio_flag:
         streams.get_by_itag("139").download(
             output_path="data/audio",
             filename=f"audio_{video_id}.mp4"
         )
 
-    if transcript:
-        transcript = download_transcript(video_id)
+    transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+    transcript_text = TextFormatter().format_transcript(transcript)
+
+    if transcript_flag:
+        transcript_json = JSONFormatter().format_transcript(transcript)
+        with open(f"data/caption/captions_{video_id}.json", "w", encoding="utf-8") as outfile:
+            outfile.write(transcript_json)
 
     stats = {
         "id": video_id,
@@ -34,23 +39,12 @@ def download_video(video, visual, audio, transcript):
         "res": "480p",
         "abr": "48kbps",
         "title": video.title,
-        "transcript": transcript,
+        "transcript": transcript_text,
         "length": video.length,
         "views": video.views,
     }
 
     return stats
-
-
-def download_transcript(video_id):
-    transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
-    transcript_text = TextFormatter().format_transcript(transcript)
-    transcript_json = JSONFormatter().format_transcript(transcript)
-
-    with open(f"data/caption/captions_{video_id}.json", "w", encoding="utf-8") as outfile:
-        outfile.write(transcript_json)
-
-    return transcript_text
 
 
 if __name__ == "__main__":
