@@ -81,6 +81,8 @@ if __name__ == "__main__":
             continue
         if args.resume and video.video_id in ids:
             continue
+        if not video.title.startswith("Moist Meter"):
+            continue
 
         try:
             future = pool.submit(download_video,
